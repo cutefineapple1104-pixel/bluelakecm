@@ -81,6 +81,6 @@ with tabs[1]:
             data.append(entry)
             save_data(data)
             st.success("✅ 업로드 완료!")
-            st.experimental_rerun()
+            st.rerun()   # ✅ 최신 Streamlit 문법
         else:
             st.warning("사진과 글을 모두 입력해주세요.")
