@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from PIL import Image
 
-# 폴더 생성
+# 폴더 및 데이터 파일 설정
 UPLOAD_DIR = "uploads"
 DB_FILE = "data.json"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -20,6 +20,37 @@ def save_data(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+def delete_entry(target):
+    """데이터와 실제 파일 삭제"""
+    data = load_data()
+    new_data = [d for d in data if d["path"] != target["path"]]
+    save_data(new_data)
+    if os.path.exists(target["path"]):
+        os.remove(target["path"])
+    st.success("🗑️ 삭제 완료!")
+    st.rerun()
+
+def rename_entry(target, new_name):
+    """파일 이름 변경 (파일과 데이터 모두 갱신)"""
+    ext = os.path.splitext(target["path"])[1]
+    new_filename = f"{new_name}{ext}"
+    new_path = os.path.join(UPLOAD_DIR, new_filename)
+
+    # 실제 파일 이름 변경
+    os.rename(target["path"], new_path)
+
+    # JSON 데이터 갱신
+    data = load_data()
+    for d in data:
+        if d["path"] == target["path"]:
+            d["filename"] = new_filename
+            d["path"] = new_path
+            break
+    save_data(data)
+    st.success("✏️ 이름 변경 완료!")
+    st.session_state["selected"] = None
+    st.rerun()
+
 # 페이지 설정
 st.set_page_config(page_title="사진 갤러리", layout="wide")
 
@@ -32,7 +63,7 @@ st.title("📸 사진 갤러리")
 tabs = st.tabs(["📂 갤러리 보기", "🖼 새 사진 올리기"])
 
 # -------------------------------------
-# 📂 갤러리 탭
+# 📂 갤러리 보기
 # -------------------------------------
 with tabs[0]:
     if not data:
@@ -55,8 +86,30 @@ with tabs[0]:
             st.image(sel["path"], use_column_width=True)
             st.write(f"🕓 업로드 시각: {sel['timestamp']}")
             st.markdown(f"**글 내용:** {sel['text']}")
-            if st.button("🔙 닫기"):
-                del st.session_state["selected"]
+
+            # 버튼 나열
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("🔙 닫기"):
+                    del st.session_state["selected"]
+                    st.rerun()
+            with col2:
+                if st.button("🗑️ 삭제하기"):
+                    delete_entry(sel)
+            with col3:
+                if "renaming" not in st.session_state:
+                    if st.button("✏️ 이름 변경"):
+                        st.session_state["renaming"] = True
+                else:
+                    new_name = st.text_input("새 파일 이름 (확장자 제외)", value=os.path.splitext(sel["filename"])[0])
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("✅ 변경 저장"):
+                            rename_entry(sel, new_name)
+                    with c2:
+                        if st.button("❌ 취소"):
+                            del st.session_state["renaming"]
+                            st.rerun()
 
 # -------------------------------------
 # 🖼 업로드 탭
@@ -73,7 +126,7 @@ with tabs[1]:
                 f.write(uploaded.getbuffer())
 
             entry = {
-                "filename": uploaded.name,
+                "filename": filename,
                 "path": filepath,
                 "text": text.strip(),
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -81,6 +134,6 @@ with tabs[1]:
             data.append(entry)
             save_data(data)
             st.success("✅ 업로드 완료!")
-            st.rerun()   # ✅ 최신 Streamlit 문법
+            st.rerun()
         else:
             st.warning("사진과 글을 모두 입력해주세요.")
