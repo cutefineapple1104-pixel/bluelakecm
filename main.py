@@ -4,12 +4,10 @@ import json
 from datetime import datetime
 from PIL import Image
 
-# 폴더 및 데이터 파일 설정
 UPLOAD_DIR = "uploads"
 DB_FILE = "data.json"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# 데이터 로드/저장 함수
 def load_data():
     if os.path.exists(DB_FILE):
         with open(DB_FILE, "r", encoding="utf-8") as f:
@@ -21,25 +19,22 @@ def save_data(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def delete_entry(target):
-    """데이터와 실제 파일 삭제"""
     data = load_data()
     new_data = [d for d in data if d["path"] != target["path"]]
     save_data(new_data)
     if os.path.exists(target["path"]):
         os.remove(target["path"])
     st.success("🗑️ 삭제 완료!")
+    if "selected" in st.session_state:
+        del st.session_state["selected"]
     st.rerun()
 
 def rename_entry(target, new_name):
-    """파일 이름 변경 (파일과 데이터 모두 갱신)"""
     ext = os.path.splitext(target["path"])[1]
     new_filename = f"{new_name}{ext}"
     new_path = os.path.join(UPLOAD_DIR, new_filename)
-
-    # 실제 파일 이름 변경
     os.rename(target["path"], new_path)
 
-    # JSON 데이터 갱신
     data = load_data()
     for d in data:
         if d["path"] == target["path"]:
@@ -48,18 +43,15 @@ def rename_entry(target, new_name):
             break
     save_data(data)
     st.success("✏️ 이름 변경 완료!")
-    st.session_state["selected"] = None
+    if "selected" in st.session_state:
+        del st.session_state["selected"]
     st.rerun()
 
-# 페이지 설정
 st.set_page_config(page_title="사진 갤러리", layout="wide")
 
-# 데이터 불러오기
 data = load_data()
-
 st.title("📸 사진 갤러리")
 
-# 탭 구성
 tabs = st.tabs(["📂 갤러리 보기", "🖼 새 사진 올리기"])
 
 # -------------------------------------
@@ -78,38 +70,47 @@ with tabs[0]:
                     st.session_state["selected"] = item
                 st.image(img, use_column_width=True)
 
-        # 클릭 시 상세 보기
+        # 선택 항목 확인
         if "selected" in st.session_state:
             sel = st.session_state["selected"]
-            st.markdown("---")
-            st.subheader(sel["filename"])
-            st.image(sel["path"], use_column_width=True)
-            st.write(f"🕓 업로드 시각: {sel['timestamp']}")
-            st.markdown(f"**글 내용:** {sel['text']}")
 
-            # 버튼 나열
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("🔙 닫기"):
-                    del st.session_state["selected"]
-                    st.rerun()
-            with col2:
-                if st.button("🗑️ 삭제하기"):
-                    delete_entry(sel)
-            with col3:
-                if "renaming" not in st.session_state:
-                    if st.button("✏️ 이름 변경"):
-                        st.session_state["renaming"] = True
-                else:
-                    new_name = st.text_input("새 파일 이름 (확장자 제외)", value=os.path.splitext(sel["filename"])[0])
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        if st.button("✅ 변경 저장"):
-                            rename_entry(sel, new_name)
-                    with c2:
-                        if st.button("❌ 취소"):
-                            del st.session_state["renaming"]
-                            st.rerun()
+            # 안전검사: 실제 파일이 존재하지 않거나 데이터가 사라진 경우
+            if not sel or not os.path.exists(sel["path"]):
+                st.warning("⚠️ 선택한 파일이 더 이상 존재하지 않습니다.")
+                del st.session_state["selected"]
+                st.rerun()
+            else:
+                st.markdown("---")
+                st.subheader(sel["filename"])
+                st.image(sel["path"], use_column_width=True)
+                st.write(f"🕓 업로드 시각: {sel['timestamp']}")
+                st.markdown(f"**글 내용:** {sel['text']}")
+
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button("🔙 닫기"):
+                        del st.session_state["selected"]
+                        st.rerun()
+                with col2:
+                    if st.button("🗑️ 삭제하기"):
+                        delete_entry(sel)
+                with col3:
+                    if "renaming" not in st.session_state:
+                        if st.button("✏️ 이름 변경"):
+                            st.session_state["renaming"] = True
+                    else:
+                        new_name = st.text_input(
+                            "새 파일 이름 (확장자 제외)",
+                            value=os.path.splitext(sel["filename"])[0]
+                        )
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            if st.button("✅ 변경 저장"):
+                                rename_entry(sel, new_name)
+                        with c2:
+                            if st.button("❌ 취소"):
+                                del st.session_state["renaming"]
+                                st.rerun()
 
 # -------------------------------------
 # 🖼 업로드 탭
