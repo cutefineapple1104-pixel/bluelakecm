@@ -1,16 +1,6 @@
 streamlit
 pandas
 openpxl
-photo_site/
-│
-├─ app.py
-├─ static/
-│   └─ uploads/
-│
-└─ templates/
-    ├─ index.html
-    ├─ upload.html
-    └─ photo.html
 from flask import Flask, render_template, request, redirect, url_for
 from werkzeug.utils import secure_filename
 import os
