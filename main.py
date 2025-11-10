@@ -130,3 +130,5 @@ a:hover { text-decoration: underline; }
 <a href="/">← 갤러리로 돌아가기</a>
 </body>
 </html>
+pip install flask
+python app.py
