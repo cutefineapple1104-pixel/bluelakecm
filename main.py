@@ -1,6 +1,3 @@
-streamlit
-pandas
-openpxl
 from flask import Flask, render_template, request, redirect, url_for
 from werkzeug.utils import secure_filename
 import os
@@ -45,14 +42,12 @@ def upload():
             filename = secure_filename(file.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
-
             conn = sqlite3.connect(DB_NAME)
             c = conn.cursor()
             c.execute('INSERT INTO photos (filename, text, created_at) VALUES (?, ?, ?)',
                       (filename, text, datetime.now().isoformat()))
             conn.commit()
             conn.close()
-
             return redirect(url_for('index'))
     return render_template('upload.html')
 
