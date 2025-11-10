@@ -84,6 +84,7 @@ with tabs[0]:
                 st.subheader(sel["filename"])
                 st.image(sel["path"], use_column_width=True)
                 st.write(f"🕓 업로드 시각: {sel['timestamp']}")
+                st.markdown(f"{sel['text']}")
 
                 col1, col2, col3 = st.columns(3)
                 with col1:
